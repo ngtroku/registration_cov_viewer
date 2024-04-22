@@ -3,9 +3,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from pyridescence import *
 
-import read_bin
-import random_sample
 import basic_registration
+import functions
 
 # Define a callback for UI rendering
 def ui_callback():
@@ -32,11 +31,11 @@ sampling_rate = 0.5 #点群全体から抽出する点数の割合を決定
 scale_x = 2 #正規分布の分散
 scale_y = 2
 
-original_points = read_bin.bin_to_numpy(binFileName) #バイナリからnumpy.array形式で点群データを取得
-sampled_cloud1, sampled_cloud2 = random_sample.random_sampling(original_points, sampling_rate) #ランダムサンプリングされた点群を生成
+original_points = functions.bin_to_numpy(binFileName) #バイナリからnumpy.array形式で点群データを取得
+sampled_cloud1, sampled_cloud2 = functions.random_sampling(original_points, sampling_rate) #ランダムサンプリングされた点群を生成
 
-noised_1 = random_sample.points_noise(sampled_cloud1, scale_x, scale_y)
-noised_2 = random_sample.points_noise(sampled_cloud2, scale_x, scale_y)
+noised_1 = functions.points_noise(sampled_cloud1, scale_x, scale_y)
+noised_2 = functions.points_noise(sampled_cloud2, scale_x, scale_y)
 
 registration = basic_registration.example_numpy1(noised_1, noised_2)
 
