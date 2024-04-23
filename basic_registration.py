@@ -5,7 +5,6 @@ import numpy
 from scipy.spatial.transform import Rotation
 
 import small_gicp
-import read_bin
 
 # Basic registation example with numpy arrays
 def example_numpy1(target_raw_numpy : numpy.ndarray, source_raw_numpy : numpy.ndarray):
@@ -145,25 +144,6 @@ def test_example_small2(load_points):
   T_target_source = example_small2(target_raw_numpy, source_raw_numpy)
   verify_result(T_target_source, gt_T_target_source)
 
-"""
-if __name__ == "__main__":
-  target_raw = small_gicp.read_ply(('data/target.ply'))  # Read the target point cloud (small_gicp.PointCloud)
-  source_raw = small_gicp.read_ply(('data/source.ply'))  # Read the source point cloud (small_gicp.PointCloud)
-
-  target_raw_numpy = target_raw.points()                    # Nx4 numpy array of the target point cloud
-  source_raw_numpy = source_raw.points()                    # Nx4 numpy array of the source point cloud
-
-  T_target_source = example_numpy1(target_raw_numpy, source_raw_numpy)
-
-  #print(T_target_source)
-  #T_target_source = example_numpy2(target_raw_numpy, source_raw_numpy)
-  #T_target_source = example_small1(target_raw_numpy, source_raw_numpy)
-  #T_target_source = example_small2(target_raw_numpy, source_raw_numpy)
-"""
-if __name__ == "__main__":
-  binFileName = './data/000000.bin'
-  rotate_params = (0, 0, 0)
-  translation_params = (0, 1, 0)
 
   source = read_bin.bin_to_numpy(binFileName)
   target = read_bin.translation(source, rotate_params, translation_params)
