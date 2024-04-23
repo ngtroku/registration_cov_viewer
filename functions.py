@@ -66,3 +66,4 @@ def points_noise(array, scale_x, scale_y):
 
     array_noised = translation(array, (0, 0, 0), (noise_x[0], noise_y[0], 0))
     return array_noised
+    
