@@ -10,10 +10,12 @@ if __name__ == "__main__":
     scale_rotation = 3 #回転移動の分散
     scale_translation = 1 #並行移動の分散
 
+    ground_filter = True
+
     if file_name1[-4:] == ".bin":
-        source_raw_numpy, target_raw_numpy, rotation_x, rotation_y, rotation_z, noise_x, noise_y = factor.preprocess(file_name1, sampling_rate, scale_rotation, scale_translation, file_format = "bin", lidar_model="VLP-16")
+        source_raw_numpy, target_raw_numpy, rotation_x, rotation_y, rotation_z, noise_x, noise_y = factor.preprocess(file_name1, sampling_rate, scale_rotation, scale_translation, ground_filter, file_format = "bin", lidar_model="VLP-16")
     elif file_name1[-4:] == ".csv":
-        source_raw_numpy, target_raw_numpy, rotation_x, rotation_y, rotation_z, noise_x, noise_y = factor.preprocess(file_name1, sampling_rate, scale_rotation, scale_translation, file_format = "bin", lidar_model="VLP-16")
+        source_raw_numpy, target_raw_numpy, rotation_x, rotation_y, rotation_z, noise_x, noise_y = factor.preprocess(file_name1, sampling_rate, scale_rotation, scale_translation, ground_filter, file_format = "csv", lidar_model="VLP-16")
     else:
         print("set .csv file or .bin file")
         sys.exit()

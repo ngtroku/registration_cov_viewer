@@ -13,12 +13,17 @@ def save_csv(pointcloud, eigenvalue, output_name):
   output_df = pd.concat([xyz, value], axis=1)
   output_df.to_csv(output_name)
 
-def preprocess(file_name, sampling_rate, scale_rotation, scale_translation, file_format, lidar_model):
+def preprocess(file_name, sampling_rate, scale_rotation, scale_translation, ground_filter, file_format, lidar_model):
+
+  # open data file
   if file_format == "csv":
     original_points = functions.csv_to_numpy(file_name, lidar_model)
   elif file_format == "bin":
     original_points = functions.bin_to_numpy(file_name)
-    
+
+  if ground_filter:
+    original_points = original_points[original_points[:, 2] >= 0.3]
+
   sampled_cloud1, sampled_cloud2 = functions.random_sampling(original_points, sampling_rate)
  
   source_points, rotation_x, rotation_y, rotation_z, noise_x1, noise_y1 = functions.points_noise(sampled_cloud1, 0, 0)
@@ -26,8 +31,13 @@ def preprocess(file_name, sampling_rate, scale_rotation, scale_translation, file
   
   return source_points, target_points, rotation_x, rotation_y, rotation_z, noise_x2, noise_y2
 
-def preprocess_manual(csv_file_name, sampling_rate, rotation_x, rotation_y, rotation_z, noise_x, noise_y, lidar_model="AT128"):
-  original_points = functions.csv_to_numpy(csv_file_name, lidar_model)
+def preprocess_manual(file_name, sampling_rate, rotation_x, rotation_y, rotation_z, noise_x, noise_y, file_format, lidar_model):
+  # open data file
+  if file_format == "bin":
+    original_points = functions.bin_to_numpy(file_name)
+  elif file_format == "csv":
+    original_points = functions.csv_to_numpy(file_name, lidar_model)
+
   sampled_cloud1, sampled_cloud2 = functions.random_sampling(original_points, sampling_rate)
 
   source_points = functions.points_noise_manual(sampled_cloud1, 0, 0, 0, 0, 0)
@@ -83,6 +93,8 @@ def postprocess(list_xyz, list_cov_eigen_value, list_save_name):
 
   for xyz, cov_eigen_value, save_name in zip(list_xyz, list_cov_eigen_value, list_save_name):
     save_csv(np.array(xyz), np.array(cov_eigen_value), save_name)
+
+    
 
 
 
