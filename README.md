@@ -1,5 +1,5 @@
 # registration_cov_viewer
-iridescenceでマッチング共分散を可視化する
+マッチング共分散を可視化する
 
 # Dependencies
 small_gicp https://github.com/koide3/iridescence
