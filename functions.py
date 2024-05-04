@@ -1,9 +1,23 @@
 import numpy as np
+import pandas as pd
 import open3d as o3d
 
 def bin_to_numpy(bin_file): # .bin file to numpy array (N x 3)
     data = np.fromfile(bin_file, dtype=np.float32).reshape((-1, 4)).astype(np.float64)
     return data[:, 0:3]
+
+def csv_to_numpy(file_name, lidar_type):
+    df = pd.read_csv(file_name)
+    if lidar_type == "VLP-16":
+        point_cloud = df[["Points_0", "Points_1", "Points_2"]]
+        return np.array(point_cloud)
+    elif lidar_type == "AT128":
+        point_cloud = df[["x(m)", "y(m)", "z(m)"]]
+        return np.array(point_cloud)
+    elif lidar_type == "pcd":
+        point_cloud = df[["x", "y", "z"]]
+        return np.array(point_cloud)
+
 
 def translation(array, rotate_params, translation_params): 
     point_cloud = o3d.geometry.PointCloud()
@@ -59,11 +73,18 @@ def random_sampling(array, sample_rate): # random sampling
 
     return sampled_array1, sampled_array2
 
-def points_noise(array, scale_x, scale_y):
+def points_noise(array, scale_rotation, scale_translation):
     rng = np.random.default_rng()
-    noise_x = rng.normal(0, scale_x, 1)
-    noise_y = rng.normal(0, scale_y, 1)
+    rotation_x = rng.normal(0, scale_rotation, 1) * np.pi / 180
+    rotation_y = rng.normal(0, scale_rotation, 1) * np.pi / 180
+    rotation_z = rng.normal(0, scale_rotation, 1) * np.pi / 180
+    noise_x = rng.normal(0, scale_translation, 1)
+    noise_y = rng.normal(0, scale_translation, 1)
 
-    array_noised = translation(array, (0, 0, 0), (noise_x[0], noise_y[0], 0))
+    array_noised = translation(array, (rotation_x[0], rotation_y[0], rotation_z[0]), (noise_x[0], noise_y[0], 0))
+    return array_noised, rotation_x, rotation_y, rotation_z, noise_x, noise_y
+
+def points_noise_manual(array, rotation_x, rotation_y, rotation_z, noise_x, noise_y):
+    array_noised = translation(array, (rotation_x, rotation_y, rotation_z), (noise_x, noise_y, 0))
     return array_noised
     
