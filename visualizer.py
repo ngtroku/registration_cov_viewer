@@ -19,12 +19,6 @@ def cmap(value):
     a = list(itertools.chain.from_iterable(colors))
     b = [i for i in a]
     return b
-    """
-    colors = []
-    for i in range(value.shape[0]):
-        colors.append([0, 0, value[i][0]/2])
-    return colors
-    """
 
 def show_hist(eigen_value):
     fig = plt.figure()
@@ -37,7 +31,7 @@ def show_hist(eigen_value):
     plt.show()
 
 if __name__ == "__main__":
-    file_name = input("Please set visualize file path:")
+    file_name = input("Please set visualize file path >> ")
     xyz, eigenvalue = csv_2_array(str(file_name))
     colors = cmap(eigenvalue)
 
