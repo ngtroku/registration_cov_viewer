@@ -13,7 +13,7 @@ def csv_2_array(file_name):
     return np.array(pointcloud), np.array(eigenvalue)
 
 def cmap(value):
-    colors_cmap = matplotlib.colormaps["Blues"]
+    colors_cmap = matplotlib.colormaps["Reds"]
     colors = colors_cmap(value)
     colors = colors[:, :, 0:3].tolist()
     a = list(itertools.chain.from_iterable(colors))
@@ -26,7 +26,7 @@ def cmap(value):
     return colors
     """
 
-xyz, eigenvalue = csv_2_array("./visualize_rouka_person.csv")
+xyz, eigenvalue = csv_2_array("./result_campus.csv")
 colors = cmap(eigenvalue)
 
 pointcloud1 = o3d.geometry.PointCloud()
