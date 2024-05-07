@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import open3d as o3d
+import small_gicp
 
 def bin_to_numpy(bin_file): # .bin file to numpy array (N x 3)
     data = np.fromfile(bin_file, dtype=np.float32).reshape((-1, 4)).astype(np.float64)
@@ -17,7 +18,6 @@ def csv_to_numpy(file_name, lidar_type):
     elif lidar_type == "pcd":
         point_cloud = df[["x", "y", "z"]]
         return np.array(point_cloud)
-
 
 def translation(array, rotate_params, translation_params): 
     point_cloud = o3d.geometry.PointCloud()
@@ -81,10 +81,63 @@ def points_noise(array, scale_rotation, scale_translation):
     noise_x = rng.normal(0, scale_translation, 1)
     noise_y = rng.normal(0, scale_translation, 1)
 
-    array_noised = translation(array, (rotation_x[0], rotation_y[0], rotation_z[0]), (noise_x[0], noise_y[0], 0))
-    return array_noised, rotation_x, rotation_y, rotation_z, noise_x, noise_y
+    print("rotate x:{:.3f} rotate y:{:.3f} rotate z:{:.3f} noise x:{:.3f} noise y:{:.3f}".format(rotation_x[0], rotation_y[0], rotation_z[0], noise_x[0], noise_y[0]))
 
-def points_noise_manual(array, rotation_x, rotation_y, rotation_z, noise_x, noise_y):
+    array_noised = translation(array, (rotation_x[0], rotation_y[0], rotation_z[0]), (noise_x[0], noise_y[0], 0))
+    return array_noised
+
+def points_noise_manual(array, rotation_x, rotation_y, rotation_z, noise_x, noise_y): # 自分で設定した値で剛体変換
     array_noised = translation(array, (rotation_x, rotation_y, rotation_z), (noise_x, noise_y, 0))
     return array_noised
+
+def calc_factor(source_points, target_points):
+    source, source_tree = small_gicp.preprocess_points(source_points, downsampling_resolution=0.4)
+    target, target_tree = small_gicp.preprocess_points(target_points, downsampling_resolution=0.4)
+
+    result = small_gicp.align(target, source, target_tree)
+    result = small_gicp.align(target, source, target_tree, result.T_target_source)
+
+    factors = [small_gicp.GICPFactor()]
+    rejector = small_gicp.DistanceRejector()
+
+    sum_H = np.zeros((6, 6))
+    sum_b = np.zeros(6)
+    sum_e = 0.0
     
+    matrix_cov = np.linalg.pinv(result.H) # 全体共分散行列
+    eigen_value, eigen_vector = np.linalg.eig(matrix_cov) # 固有値と固有ベクトルを求める
+    min_eigen_value = np.argmin(eigen_value)
+    min_eigen_vector = eigen_vector[min_eigen_value] # 拘束が弱い方向を指す
+
+    list_xyz = []
+    list_cov_eigen_value = []
+
+    for i in range(source.size()):
+        succ, H, b, e = factors[0].linearize(target, source, target_tree, result.T_target_source, i, rejector)
+        if succ:
+            point_cov = np.linalg.pinv(H)
+            point_eigen_value, point_eigen_vector = np.linalg.eig(point_cov) #各点の固有値、固有ベクトルを求める
+            max_eigen_value = np.argmax(eigen_value) 
+            max_eigen_vector = point_eigen_vector[max_eigen_value]
+
+            naiseki = np.dot(max_eigen_vector, min_eigen_vector)
+            list_cov_eigen_value.append((naiseki.real + 1) / 2) # 値を0から1に変換
+            list_xyz.append(source_points[i])
+
+            sum_H += H
+            sum_b += b
+            sum_e += e
+    
+    return np.array(list_xyz), np.array(list_cov_eigen_value)
+
+def save_csv(pointcloud, eigenvalue, output_name):
+  xyz = pd.DataFrame(pointcloud, columns = ["x","y","z"])
+  value = pd.DataFrame(eigenvalue, columns=["eigen_value"])
+  output_df = pd.concat([xyz, value], axis=1)
+  output_df.to_csv(output_name)
+
+def postprocess(list_xyz, list_cov_eigen_value, list_save_name):
+  for xyz, cov_eigen_value, save_name in zip(list_xyz, list_cov_eigen_value, list_save_name):
+    save_csv(np.array(xyz), np.array(cov_eigen_value), save_name)
+    
+        
