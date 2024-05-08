@@ -7,7 +7,7 @@ def bin_to_numpy(bin_file): # .bin file to numpy array (N x 3)
     data = np.fromfile(bin_file, dtype=np.float32).reshape((-1, 4)).astype(np.float64)
     return data[:, 0:3]
 
-def csv_to_numpy(file_name, lidar_type):
+def csv_to_numpy(file_name, lidar_type): # .csv file to numpy array (N x 3)
     df = pd.read_csv(file_name)
     if lidar_type == "VLP-16":
         point_cloud = df[["Points_0", "Points_1", "Points_2"]]
@@ -19,7 +19,7 @@ def csv_to_numpy(file_name, lidar_type):
         point_cloud = df[["x", "y", "z"]]
         return np.array(point_cloud)
 
-def translation(array, rotate_params, translation_params): 
+def translation(array, rotate_params, translation_params): # 回転移動, 並進移動
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(array)
 
@@ -73,17 +73,20 @@ def random_sampling(array, sample_rate): # random sampling
 
     return sampled_array1, sampled_array2
 
-def points_noise(array, scale_rotation, scale_translation):
+def points_noise(array, scale_translation):
     rng = np.random.default_rng()
-    rotation_x = rng.normal(0, scale_rotation, 1) * np.pi / 180
-    rotation_y = rng.normal(0, scale_rotation, 1) * np.pi / 180
-    rotation_z = rng.normal(0, scale_rotation, 1) * np.pi / 180
-    noise_x = rng.normal(0, scale_translation, 1)
-    noise_y = rng.normal(0, scale_translation, 1)
 
-    print("rotate x:{:.3f} rotate y:{:.3f} rotate z:{:.3f} noise x:{:.3f} noise y:{:.3f}".format(rotation_x[0], rotation_y[0], rotation_z[0], noise_x[0], noise_y[0]))
+    # x, y, z 軸方向の各点に正規分布からサンプリングされたノイズを定義
+    noise_x = rng.normal(0, scale_translation, array.shape[0])
+    noise_y = rng.normal(0, scale_translation, array.shape[0])
+    noise_z = rng.normal(0, scale_translation, array.shape[0])
 
-    array_noised = translation(array, (rotation_x[0], rotation_y[0], rotation_z[0]), (noise_x[0], noise_y[0], 0))
+    # ノイズを与える
+    array_noised = array.copy()
+    array_noised[:, 0] += noise_x
+    array_noised[:, 1] += noise_y
+    array_noised[:, 2] += noise_z
+
     return array_noised
 
 def points_noise_manual(array, rotation_x, rotation_y, rotation_z, noise_x, noise_y): # 自分で設定した値で剛体変換
@@ -91,6 +94,8 @@ def points_noise_manual(array, rotation_x, rotation_y, rotation_z, noise_x, nois
     return array_noised
 
 def calc_factor(source_points, target_points):
+    # update : ヘッセ行列を直接使用(2024 5/8)
+
     source, source_tree = small_gicp.preprocess_points(source_points, downsampling_resolution=0.4)
     target, target_tree = small_gicp.preprocess_points(target_points, downsampling_resolution=0.4)
 
@@ -100,14 +105,14 @@ def calc_factor(source_points, target_points):
     factors = [small_gicp.GICPFactor()]
     rejector = small_gicp.DistanceRejector()
 
+    # initialize
     sum_H = np.zeros((6, 6))
     sum_b = np.zeros(6)
     sum_e = 0.0
     
-    matrix_cov = np.linalg.pinv(result.H) # 全体共分散行列
-    eigen_value, eigen_vector = np.linalg.eig(matrix_cov) # 固有値と固有ベクトルを求める
-    min_eigen_value = np.argmin(eigen_value)
-    min_eigen_vector = eigen_vector[min_eigen_value] # 拘束が弱い方向を指す
+    eigen_value, eigen_vector = np.linalg.eig(result.H)
+    global_max_value = np.argmax(eigen_value)
+    global_max_vector = eigen_vector[:, global_max_value] # 最も拘束が弱い方向
 
     list_xyz = []
     list_cov_eigen_value = []
@@ -115,13 +120,11 @@ def calc_factor(source_points, target_points):
     for i in range(source.size()):
         succ, H, b, e = factors[0].linearize(target, source, target_tree, result.T_target_source, i, rejector)
         if succ:
-            point_cov = np.linalg.pinv(H)
-            point_eigen_value, point_eigen_vector = np.linalg.eig(point_cov) #各点の固有値、固有ベクトルを求める
-            max_eigen_value = np.argmax(eigen_value) 
-            max_eigen_vector = point_eigen_vector[max_eigen_value]
-
-            naiseki = np.dot(max_eigen_vector, min_eigen_vector)
-            list_cov_eigen_value.append((naiseki.real + 1) / 2) # 値を0から1に変換
+            point_eigen_value, point_eigen_vector = np.linalg.eig(H) #各点の固有値、固有ベクトルを求める
+            local_min_value = np.argmin(eigen_value) 
+            local_min_vector = point_eigen_vector[:, local_min_value] # 最も拘束が強い固有ベクトル
+            naiseki = np.dot(global_max_vector, local_min_vector)
+            list_cov_eigen_value.append((naiseki.real + 1) / 2) # 値を0から1に範囲に制限
             list_xyz.append(source_points[i])
 
             sum_H += H

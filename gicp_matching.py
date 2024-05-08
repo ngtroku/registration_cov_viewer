@@ -36,13 +36,13 @@ if __name__ == "__main__":
 
         if counter == 1:
             print("iteration:{}/{}".format(counter, num_matching))
-            source, target = sampled_points1, functions.points_noise(sampled_points2, scale_rotation, scale_translation)
+            source, target = sampled_points1, functions.points_noise(sampled_points2, scale_translation)
             coordinate_origin, dot_eigen_value_origin = functions.calc_factor(source, target)
             counter += 1
 
         else:
             print("iteration:{}/{}".format(counter, num_matching))
-            source, target = sampled_points1, functions.points_noise(sampled_points2, scale_rotation, scale_translation)
+            source, target = sampled_points1, functions.points_noise(sampled_points2, scale_translation)
             coordinate, dot_eigen_value = functions.calc_factor(source, target)
             coordinate_origin = np.concatenate([coordinate_origin, coordinate])
             dot_eigen_value_origin = np.concatenate([dot_eigen_value_origin, dot_eigen_value])
