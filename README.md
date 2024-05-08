@@ -2,11 +2,13 @@
 点群レジストレーションにおいて重要な点を探索し、可視化する。
 
 # Dependencies
-small_gicp https://github.com/koide3/iridescence
+small_gicp https://github.com/koide3/small_gicp
 
 Other python libraries can be downloaded `requirements.txt`
 
 `pip install -r ./requirements.txt`
+
+Tested on ubuntu20.04 + Python 3.10.12
 
 # How to use
 ## gicp_matching.py (点群レジストレーション)
